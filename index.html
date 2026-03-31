@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Digital Detox AI — Wellness Coach</title>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #222636;
+    --border: #2e3347; --text: #e8eaf2; --muted: #7a7f99;
+    --purple: #7c6fe0; --teal: #3fcfa3; --amber: #f0a13a;
+    --coral: #e86b52; --green: #5ecb80; --blue: #4da6e8;
+    --radius: 12px; --transition: 0.2s ease;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; display: flex;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 240px; background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 24px 16px; gap: 8px;
+    position: fixed; height: 100vh; overflow-y: auto;
+  }
+
+  .logo {
+    font-size: 18px; font-weight: 700; color: var(--purple);
+    padding: 0 8px 20px; letter-spacing: -0.3px;
+  }
+  .logo span { font-weight: 400; color: var(--muted); }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: var(--radius); cursor: pointer;
+    font-size: 14px; color: var(--muted); transition: all var(--transition);
+    border: none; background: none; width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--surface2); color: var(--purple); font-weight: 500; }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+  .nav-section {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.8px;
+    padding: 16px 12px 6px;
+  }
+
+  /* ── Main content ── */
+  .main { margin-left: 240px; flex: 1; padding: 32px; min-height: 100vh; }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+  }
+
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+  /* ── Stat cards ── */
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+  .stat-label { font-size: 12px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-size: 28px; font-weight: 700; margin: 6px 0 2px; }
+  .stat-sub { font-size: 12px; color: var(--muted); }
+  .stat-card.purple .stat-value { color: var(--purple); }
+  .stat-card.teal   .stat-value { color: var(--teal); }
+  .stat-card.amber  .stat-value { color: var(--amber); }
+  .stat-card.coral  .stat-value { color: var(--coral); }
+  .stat-card.green  .stat-value { color: var(--green); }
+
+  /* ── Page header ── */
+  .page-header { margin-bottom: 24px; }
+  .page-title { font-size: 24px; font-weight: 700; }
+  .page-sub { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+  /* ── Progress ring ── */
+  .ring-container {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .ring-svg { transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--surface2); stroke-width: 8; }
+  .ring-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
+  .ring-label { text-anchor: middle; dominant-baseline: central; transform: rotate(90deg) translateX(50%); }
+
+  /* ── Score badge ── */
+  .score-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 48px; height: 48px; border-radius: 50%; font-weight: 700; font-size: 14px;
+    border: 2px solid;
+  }
+  .score-badge.A  { background: #1a3a2a; color: var(--green); border-color: var(--green); }
+  .score-badge.B  { background: #1a2e3a; color: var(--blue); border-color: var(--blue); }
+  .score-badge.C  { background: #3a2a1a; color: var(--amber); border-color: var(--amber); }
+  .score-badge.D  { background: #3a1f1a; color: var(--coral); border-color: var(--coral); }
+  .score-badge.F  { background: #3a1a1a; color: #e05555; border-color: #e05555; }
+
+  /* ── Warning badges ── */
+  .warning-item {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 10px 12px; background: #261e1a; border-radius: 8px; font-size: 13px;
+    border-left: 3px solid var(--coral);
+  }
+  .warning-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--coral); margin-top: 5px; flex-shrink: 0; }
+
+  /* ── Chat UI ── */
+  .chat-container {
+    display: flex; flex-direction: column; height: calc(100vh - 130px);
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+  }
+
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px;
+  }
+
+  .message { display: flex; gap: 10px; max-width: 75%; }
+  .message.user { align-self: flex-end; flex-direction: row-reverse; }
+  .message.assistant { align-self: flex-start; }
+
+  .message-bubble {
+    padding: 11px 15px; border-radius: 16px; font-size: 14px; line-height: 1.6;
+  }
+  .message.user .message-bubble { background: var(--purple); color: #fff; border-radius: 16px 16px 4px 16px; }
+  .message.assistant .message-bubble { background: var(--surface2); color: var(--text); border-radius: 4px 16px 16px 16px; }
+
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;
+  }
+  .assistant .avatar { background: linear-gradient(135deg, var(--purple), var(--teal)); }
+  .user .avatar { background: var(--surface2); }
+
+  .chat-input-area {
+    padding: 16px; border-top: 1px solid var(--border);
+    display: flex; gap: 10px; align-items: flex-end;
+  }
+
+  .chat-input {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px 14px; color: var(--text); font-size: 14px;
+    resize: none; max-height: 120px; min-height: 44px; outline: none;
+    font-family: inherit;
+  }
+  .chat-input:focus { border-color: var(--purple); }
+
+  .send-btn {
+    width: 44px; height: 44px; border-radius: 12px; background: var(--purple);
+    border: none; color: white; cursor: pointer; font-size: 16px;
+    display: flex; align-items: center; justify-content: center; transition: all var(--transition);
+    flex-shrink: 0;
+  }
+  .send-btn:hover { background: #9183e8; }
+
+  /* ── Quick actions ── */
+  .quick-actions { display: flex; gap: 8px; padding: 12px 16px 0; flex-wrap: wrap; }
+  .quick-chip {
+    padding: 6px 12px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; font-size: 12px; color: var(--muted); cursor: pointer;
+    transition: all var(--transition); white-space: nowrap;
+  }
+  .quick-chip:hover { color: var(--text); border-color: var(--purple); }
+
+  /* ── Focus timer ── */
+  .timer-ring {
+    width: 200px; height: 200px; position: relative; margin: 20px auto;
+  }
+  .timer-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .timer-center {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  .timer-time { font-size: 36px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .timer-phase { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .timer-controls { display: flex; gap: 12px; justify-content: center; margin-top: 16px; }
+  .btn {
+    padding: 10px 20px; border-radius: 10px; border: none; cursor: pointer;
+    font-size: 14px; font-weight: 500; transition: all var(--transition);
+  }
+  .btn-primary { background: var(--purple); color: white; }
+  .btn-primary:hover { background: #9183e8; }
+  .btn-secondary { background: var(--surface2); color: var(--text); }
+  .btn-secondary:hover { background: var(--border); }
+
+  /* ── Streak display ── */
+  .streak-flame { font-size: 48px; text-align: center; margin: 8px 0; }
+  .streak-count { font-size: 40px; font-weight: 800; text-align: center; color: var(--amber); }
+  .streak-label { font-size: 13px; color: var(--muted); text-align: center; }
+
+  /* ── Progress bars ── */
+  .progress-bar-wrap { background: var(--surface2); border-radius: 6px; height: 8px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; border-radius: 6px; transition: width 1s ease; }
+
+  /* ── Section headers ── */
+  .section-header { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<!-- ── Sidebar ── -->
+<nav class="sidebar">
+  <div class="logo">detox<span>AI</span></div>
+  <button class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">◈</span> Dashboard</button>
+  <button class="nav-item" onclick="showPage('coach')"><span class="nav-icon">◉</span> AI Coach</button>
+  <button class="nav-item" onclick="showPage('focus')"><span class="nav-icon">⏱</span> Focus Mode</button>
+  <div class="nav-section">Analytics</div>
+  <button class="nav-item" onclick="showPage('analytics')"><span class="nav-icon">◧</span> Usage Stats</button>
+  <button class="nav-item" onclick="showPage('report')"><span class="nav-icon">◈</span> Weekly Report</button>
+  <div class="nav-section">Progress</div>
+  <button class="nav-item" onclick="showPage('streak')"><span class="nav-icon">🔥</span> Streak</button>
+  <button class="nav-item" onclick="showPage('goals')"><span class="nav-icon">◎</span> Goals</button>
+</nav>
+
+<!-- ── Main content ── -->
+<main class="main">
+
+  <!-- Dashboard -->
+  <div id="page-dashboard" class="page active">
+    <div class="page-header">
+      <div class="page-title">Good morning, Alex 👋</div>
+      <div class="page-sub">Saturday · Your wellness journey continues</div>
+    </div>
+
+    <div class="grid-4" style="margin-bottom:20px">
+      <div class="stat-card purple">
+        <div class="stat-label">Wellness Score</div>
+        <div class="stat-value">74</div>
+        <div class="stat-sub">Grade B · Good</div>
+      </div>
+      <div class="stat-card teal">
+        <div class="stat-label">Today's Usage</div>
+        <div class="stat-value">2.4h</div>
+        <div class="stat-sub">144 min of 180 limit</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-label">Detox Streak</div>
+        <div class="stat-value">🔥 7</div>
+        <div class="stat-sub">Days in a row</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Focus Sessions</div>
+        <div class="stat-value">3</div>
+        <div class="stat-sub">75 min focused today</div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:20px">
+      <div class="card">
+        <div class="section-header">Daily usage progress</div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px">
+          <span>144 min used</span><span style="color:var(--muted)">180 min limit</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" style="width:80%;background:var(--teal)"></div>
+        </div>
+        <div style="margin-top:20px">
+          <div class="section-header">App breakdown</div>
+          <div id="app-breakdown"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-header">Active warnings</div>
+        <div id="warnings-list"></div>
+        <div style="margin-top:20px">
+          <div class="section-header">Score breakdown</div>
+          <div id="score-breakdown"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Coach Chat -->
+  <div id="page-coach" class="page">
+    <div class="page-header">
+      <div class="page-title">AI Wellness Coach</div>
+      <div class="page-sub">Your personalised digital detox advisor</div>
+    </div>
+    <div class="chat-container">
+      <div class="quick-actions">
+        <span class="quick-chip" onclick="sendQuick('How am I doing this week?')">📊 My progress</span>
+        <span class="quick-chip" onclick="sendQuick('Give me a tip to use my phone less')">💡 Quick tip</span>
+        <span class="quick-chip" onclick="sendQuick('I use Instagram too much before sleeping')">📱 Late-night issue</span>
+        <span class="quick-chip" onclick="sendQuick('What is my wellness score?')">⭐ My score</span>
+        <span class="quick-chip" onclick="sendQuick('Show my streak')">🔥 Streak</span>
+      </div>
+      <div class="chat-messages" id="chat-messages">
+        <div class="message assistant">
+          <div class="avatar">🤖</div>
+          <div class="message-bubble">
+            Hi! I'm your Digital Detox Coach. 🌱<br><br>
+            I've analysed your usage patterns and I'm ready to help you build healthier digital habits.
+            You have a <strong>7-day streak</strong> — amazing progress!<br><br>
+            What would you like to work on today?
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <textarea class="chat-input" id="chat-input" placeholder="Ask me anything about your digital wellness..." rows="1"
+          onkeydown="handleEnter(event)"></textarea>
+        <button class="send-btn" onclick="sendMessage()">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Focus Mode -->
+  <div id="page-focus" class="page">
+    <div class="page-header">
+      <div class="page-title">Focus Mode</div>
+      <div class="page-sub">Pomodoro timer for distraction-free productivity</div>
+    </div>
+    <div class="grid-2">
+      <div class="card" style="text-align:center">
+        <div class="timer-ring">
+          <svg class="timer-svg" viewBox="0 0 200 200">
+            <circle class="ring-bg" cx="100" cy="100" r="80"/>
+            <circle id="timer-ring" class="ring-fill" cx="100" cy="100" r="80"
+              stroke="var(--purple)"
+              stroke-dasharray="502.7" stroke-dashoffset="0"/>
+          </svg>
+          <div class="timer-center">
+            <div class="timer-time" id="timer-display">25:00</div>
+            <div class="timer-phase" id="timer-phase">Focus session</div>
+          </div>
+        </div>
+        <div class="timer-controls">
+          <button class="btn btn-primary" id="timer-btn" onclick="toggleTimer()">Start</button>
+          <button class="btn btn-secondary" onclick="resetTimer()">Reset</button>
+        </div>
+        <div style="margin-top:20px;font-size:13px;color:var(--muted)" id="session-count">
+          Session 1 of 4 · 3 sessions until long break
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-header">Today's focus stats</div>
+        <div class="grid-3" style="margin-bottom:20px">
+          <div style="text-align:center">
+            <div style="font-size:24px;font-weight:700;color:var(--purple)" id="focus-completed">3</div>
+            <div style="font-size:12px;color:var(--muted)">Completed</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:24px;font-weight:700;color:var(--teal)" id="focus-minutes">75</div>
+            <div style="font-size:12px;color:var(--muted)">Focus mins</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:24px;font-weight:700;color:var(--amber)">75%</div>
+            <div style="font-size:12px;color:var(--muted)">Completion</div>
+          </div>
+        </div>
+        <div class="section-header">Session history</div>
+        <div id="session-history"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analytics -->
+  <div id="page-analytics" class="page">
+    <div class="page-header">
+      <div class="page-title">Usage Analytics</div>
+      <div class="page-sub">7-day behavioral overview</div>
+    </div>
+    <div class="card">
+      <canvas id="usage-chart" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Streak -->
+  <div id="page-streak" class="page">
+    <div class="page-header">
+      <div class="page-title">Detox Streak</div>
+      <div class="page-sub">Your consistency is building new habits</div>
+    </div>
+    <div class="grid-3">
+      <div class="card" style="text-align:center">
+        <div class="streak-flame">🔥</div>
+        <div class="streak-count">7</div>
+        <div class="streak-label">Current streak (days)</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="streak-flame">🏆</div>
+        <div class="streak-count">14</div>
+        <div class="streak-label">Personal best</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="streak-flame">📅</div>
+        <div class="streak-count">23</div>
+        <div class="streak-label">Total detox days</div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:20px">
+      <div class="section-header">Milestones</div>
+      <div id="milestones"></div>
+    </div>
+  </div>
+
+  <!-- Report / Goals pages (simplified) -->
+  <div id="page-report" class="page">
+    <div class="page-header"><div class="page-title">Weekly Report</div></div>
+    <div class="card" id="report-content">
+      <p style="color:var(--muted)">Loading your weekly report...</p>
+    </div>
+  </div>
+
+  <div id="page-goals" class="page">
+    <div class="page-header"><div class="page-title">My Goals</div></div>
+    <div class="card" id="goals-content"></div>
+  </div>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+// ── Navigation ──────────────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.textContent.toLowerCase().includes(name)) n.classList.add('active');
+  });
+  if (name === 'analytics') initChart();
+}
+
+// ── Dashboard init ───────────────────────────────────────────────────────────
+const appData = [
+  { name: 'Instagram', minutes: 45, color: '#e86b9c' },
+  { name: 'YouTube',   minutes: 35, color: '#e0452a' },
+  { name: 'WhatsApp',  minutes: 28, color: '#25d366' },
+  { name: 'Chrome',    minutes: 22, color: '#4da6e8' },
+  { name: 'TikTok',    minutes: 14, color: '#7c6fe0' },
+];
+const total = appData.reduce((s, a) => s + a.minutes, 0);
+
+function initDashboard() {
+  // App breakdown bars
+  const breakdownEl = document.getElementById('app-breakdown');
+  appData.forEach(app => {
+    const pct = Math.round((app.minutes / total) * 100);
+    breakdownEl.innerHTML += `
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+          <span>${app.name}</span><span style="color:var(--muted)">${app.minutes}m (${pct}%)</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" style="width:${pct}%;background:${app.color}"></div>
+        </div>
+      </div>`;
+  });
+
+  // Warnings
+  const warnings = [
+    "Social media: 41% of screen time (above 40% threshold)",
+    "Usage trend +2.3 min/day this week",
+  ];
+  const warnEl = document.getElementById('warnings-list');
+  warnings.forEach(w => {
+    warnEl.innerHTML += `<div class="warning-item"><div class="warning-dot"></div><span>${w}</span></div>`;
+  });
+
+  // Score breakdown
+  const scores = [
+    { label: 'Usage', pts: 26, max: 40, color: 'var(--teal)' },
+    { label: 'Social', pts: 16, max: 20, color: 'var(--purple)' },
+    { label: 'Night', pts: 18, max: 20, color: 'var(--blue)' },
+    { label: 'Trend', pts: 7, max: 10, color: 'var(--amber)' },
+    { label: 'Focus', pts: 7, max: 10, color: 'var(--green)' },
+  ];
+  const scoreEl = document.getElementById('score-breakdown');
+  scores.forEach(s => {
+    const pct = Math.round((s.pts / s.max) * 100);
+    scoreEl.innerHTML += `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="font-size:12px;color:var(--muted);width:48px">${s.label}</span>
+        <div style="flex:1"><div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%;background:${s.color}"></div></div></div>
+        <span style="font-size:12px;min-width:40px;text-align:right">${s.pts}/${s.max}</span>
+      </div>`;
+  });
+
+  // Focus session history
+  const history = [
+    { label: 'Session 1', status: 'done' },
+    { label: 'Session 2', status: 'done' },
+    { label: 'Session 3', status: 'done' },
+    { label: 'Session 4', status: 'pending' },
+  ];
+  const histEl = document.getElementById('session-history');
+  history.forEach(s => {
+    const color = s.status === 'done' ? 'var(--green)' : 'var(--muted)';
+    const icon = s.status === 'done' ? '✓' : '○';
+    histEl.innerHTML += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px">
+      <span style="color:${color};font-weight:700">${icon}</span><span>${s.label} · 25 min</span></div>`;
+  });
+
+  // Milestones
+  const milestones = [
+    { days: 3, emoji: '🌱', label: '3-day streak', done: true },
+    { days: 7, emoji: '🔥', label: '1-week streak', done: true },
+    { days: 14, emoji: '⭐', label: '2-week streak', done: false },
+    { days: 30, emoji: '🏆', label: '1-month streak', done: false },
+  ];
+  const msEl = document.getElementById('milestones');
+  if (msEl) milestones.forEach(m => {
+    const opacity = m.done ? '1' : '0.35';
+    msEl.innerHTML += `
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);opacity:${opacity}">
+        <span style="font-size:24px">${m.emoji}</span>
+        <div>
+          <div style="font-size:14px;font-weight:500">${m.label}</div>
+          <div style="font-size:12px;color:var(--muted)">${m.days} consecutive days under limit</div>
+        </div>
+        ${m.done ? '<span style="margin-left:auto;color:var(--green);font-size:12px">Achieved ✓</span>' : ''}
+      </div>`;
+  });
+}
+
+// ── Chart ────────────────────────────────────────────────────────────────────
+let chartInstance = null;
+function initChart() {
+  if (chartInstance) return;
+  const ctx = document.getElementById('usage-chart').getContext('2d');
+  const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Total usage (min)', data: [210, 185, 230, 160, 195, 144, 0], backgroundColor: 'rgba(124,111,224,0.6)', borderColor: 'rgba(124,111,224,1)', borderWidth: 1 },
+        { label: 'Social media (min)', data: [85, 60, 95, 55, 70, 45, 0], backgroundColor: 'rgba(63,207,163,0.5)', borderColor: 'rgba(63,207,163,1)', borderWidth: 1 },
+      ]
+    },
+    options: {
+      responsive: true, plugins: { legend: { labels: { color: '#7a7f99' } } },
+      scales: {
+        x: { ticks: { color: '#7a7f99' }, grid: { color: '#2e3347' } },
+        y: { ticks: { color: '#7a7f99' }, grid: { color: '#2e3347' } }
+      }
+    }
+  });
+}
+
+// ── Chat ─────────────────────────────────────────────────────────────────────
+const API_BASE = 'http://localhost:8000';  // Change to deployed URL in production
+let isTyping = false;
+
+const MOCK_RESPONSES = {
+  default: [
+    "Based on your data, your social media usage is at 41% of screen time — just above the healthy 40% threshold. Try setting a 30-minute limit for Instagram specifically. That single change would bring your wellness score from 74 to around 82. 📈",
+    "Your late-night usage has improved by 18% this week — that's a great sign! Your 7-day streak shows you're building real discipline. Keep that digital sunset routine going. 🌙",
+    "You're doing really well! Your best pattern is morning usage — most of your screen time is in productive apps during business hours. Focus on reducing the evening scrolling window. 💪",
+  ]
+};
+let mockIndex = 0;
+
+function sendQuick(msg) { document.getElementById('chat-input').value = msg; sendMessage(); }
+
+function handleEnter(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg || isTyping) return;
+  input.value = '';
+  appendMessage('user', msg);
+  isTyping = true;
+
+  // Typing indicator
+  const typingId = 'typing-' + Date.now();
+  appendMessage('assistant', '<span id="' + typingId + '">●●●</span>');
+
+  // In production: replace with actual SSE fetch to /api/chat
+const response = await fetch("http://localhost:8000/api/chat?user_id=1", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    message: msg,
+    stream: false
+  })
+});
+
+const data = await response.json();
+const reply = data.reply;
+
+
+const typingEl = document.getElementById(typingId);
+if (typingEl) typingEl.closest('.message-bubble').innerHTML = reply;
+  isTyping = false;
+  scrollToBottom();
+}
+
+function appendMessage(role, content) {
+  const container = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `message ${role}`;
+  div.innerHTML = `
+    <div class="avatar">${role === 'assistant' ? '🤖' : '👤'}</div>
+    <div class="message-bubble">${content}</div>`;
+  container.appendChild(div);
+  scrollToBottom();
+}
+
+function scrollToBottom() {
+  const c = document.getElementById('chat-messages');
+  c.scrollTop = c.scrollHeight;
+}
+
+// ── Pomodoro timer ────────────────────────────────────────────────────────────
+let timerInterval = null, timerRunning = false;
+let timerSeconds = 25 * 60, totalSeconds = 25 * 60;
+const CIRCUMFERENCE = 2 * Math.PI * 80;
+
+function updateTimerDisplay() {
+  const m = Math.floor(timerSeconds / 60).toString().padStart(2, '0');
+  const s = (timerSeconds % 60).toString().padStart(2, '0');
+  document.getElementById('timer-display').textContent = `${m}:${s}`;
+
+  const progress = timerSeconds / totalSeconds;
+  const offset = CIRCUMFERENCE * (1 - progress);
+  document.getElementById('timer-ring').style.strokeDashoffset = offset;
+}
+
+function toggleTimer() {
+  const btn = document.getElementById('timer-btn');
+  if (timerRunning) {
+    clearInterval(timerInterval); timerRunning = false; btn.textContent = 'Resume';
+  } else {
+    timerRunning = true; btn.textContent = 'Pause';
+    timerInterval = setInterval(() => {
+      timerSeconds--;
+      updateTimerDisplay();
+      if (timerSeconds <= 0) {
+        clearInterval(timerInterval); timerRunning = false;
+        btn.textContent = 'Start';
+        const completed = parseInt(document.getElementById('focus-completed').textContent);
+        document.getElementById('focus-completed').textContent = completed + 1;
+        document.getElementById('focus-minutes').textContent = (completed + 1) * 25;
+        alert('Focus session complete! 🎉 Time for a break.');
+        resetTimer();
+      }
+    }, 1000);
+  }
+}
+
+function resetTimer() {
+  clearInterval(timerInterval); timerRunning = false;
+  timerSeconds = 25 * 60; totalSeconds = 25 * 60;
+  document.getElementById('timer-btn').textContent = 'Start';
+  document.getElementById('timer-phase').textContent = 'Focus session';
+  updateTimerDisplay();
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+initDashboard();
+updateTimerDisplay();
+</script>
+</body>
+</html>
